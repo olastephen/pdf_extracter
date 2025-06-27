@@ -7,7 +7,7 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            max-width: 800px;
+            max-width: 1000px;
             margin: 0 auto;
             padding: 20px;
             background-color: #f5f5f5;
@@ -23,6 +23,18 @@
             text-align: center;
             margin-bottom: 30px;
         }
+        .section {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .section h3 {
+            margin-top: 0;
+            color: #555;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
         .form-group {
             margin-bottom: 20px;
         }
@@ -32,12 +44,15 @@
             font-weight: bold;
             color: #555;
         }
-        input[type="file"], select, input[type="checkbox"] {
+        input[type="file"], select, input[type="checkbox"], input[type="text"], input[type="number"] {
             width: 100%;
             padding: 10px;
             border: 1px solid #ddd;
             border-radius: 5px;
             font-size: 14px;
+        }
+        input[type="file"][multiple] {
+            height: auto;
         }
         button {
             background-color: #007bff;
@@ -48,6 +63,7 @@
             cursor: pointer;
             font-size: 16px;
             margin-right: 10px;
+            margin-bottom: 10px;
         }
         button:hover {
             background-color: #0056b3;
@@ -55,6 +71,12 @@
         button:disabled {
             background-color: #ccc;
             cursor: not-allowed;
+        }
+        .batch-btn {
+            background-color: #28a745;
+        }
+        .batch-btn:hover {
+            background-color: #218838;
         }
         .result {
             margin-top: 30px;
@@ -97,40 +119,136 @@
             font-weight: bold;
             color: #6c757d;
         }
+        .file-list {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 0;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .file-item:last-child {
+            border-bottom: none;
+        }
+        .file-name {
+            font-weight: bold;
+        }
+        .file-size {
+            color: #6c757d;
+            font-size: 12px;
+        }
+        .batch-result {
+            margin-top: 20px;
+        }
+        .batch-summary {
+            background-color: #e9ecef;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+        .file-result {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 10px;
+        }
+        .file-result.success {
+            border-color: #28a745;
+            background-color: #d4edda;
+        }
+        .file-result.error {
+            border-color: #dc3545;
+            background-color: #f8d7da;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>PDF Text Extractor API Test</h1>
         
-        <div class="form-group">
-            <label for="pdfFile">Select PDF File:</label>
-            <input type="file" id="pdfFile" accept=".pdf" required>
+        <!-- Single File Extraction Section -->
+        <div class="section">
+            <h3>Single File Extraction</h3>
+            
+            <div class="form-group">
+                <label for="pdfFile">Select PDF File:</label>
+                <input type="file" id="pdfFile" accept=".pdf" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="extractionMethod">Extraction Method:</label>
+                <select id="extractionMethod">
+                    <option value="pdfplumber">pdfplumber (Recommended)</option>
+                    <option value="pypdf2">PyPDF2</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="includeMetadata" checked>
+                    Include PDF Metadata
+                </label>
+            </div>
+            
+            <div class="form-group">
+                <label for="pageRange">Page Range (optional, e.g., "1-3" or "1,3,5"):</label>
+                <input type="text" id="pageRange" placeholder="Leave empty for all pages">
+            </div>
+            
+            <div class="form-group">
+                <button onclick="extractTextBasic()" id="basicBtn">Extract Text (Basic)</button>
+                <button onclick="extractTextAdvanced()" id="advancedBtn">Extract Text (Advanced)</button>
+            </div>
+        </div>
+        
+        <!-- Batch File Extraction Section -->
+        <div class="section">
+            <h3>Batch File Extraction</h3>
+            
+            <div class="form-group">
+                <label for="batchPdfFiles">Select Multiple PDF Files:</label>
+                <input type="file" id="batchPdfFiles" accept=".pdf" multiple required>
+            </div>
+            
+            <div class="form-group">
+                <label for="batchExtractionMethod">Extraction Method:</label>
+                <select id="batchExtractionMethod">
+                    <option value="pdfplumber">pdfplumber (Recommended)</option>
+                    <option value="pypdf2">PyPDF2</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="batchIncludeMetadata" checked>
+                    Include PDF Metadata
+                </label>
+            </div>
+            
+            <div class="form-group">
+                <label for="batchPageRange">Page Range (optional, e.g., "1-3" or "1,3,5"):</label>
+                <input type="text" id="batchPageRange" placeholder="Leave empty for all pages">
+            </div>
+            
+            <div class="form-group">
+                <label for="maxFiles">Maximum Files (default: 10):</label>
+                <input type="number" id="maxFiles" value="10" min="1" max="50">
+            </div>
+            
+            <div class="form-group">
+                <button onclick="extractTextBatch()" id="batchBtn" class="batch-btn">Extract Text (Batch Basic)</button>
+                <button onclick="extractTextBatchAdvanced()" id="batchAdvancedBtn" class="batch-btn">Extract Text (Batch Advanced)</button>
+            </div>
+            
+            <div id="fileList" class="file-list" style="display: none;"></div>
         </div>
         
         <div class="form-group">
-            <label for="extractionMethod">Extraction Method:</label>
-            <select id="extractionMethod">
-                <option value="pdfplumber">pdfplumber (Recommended)</option>
-                <option value="pypdf2">PyPDF2</option>
-            </select>
-        </div>
-        
-        <div class="form-group">
-            <label>
-                <input type="checkbox" id="includeMetadata" checked>
-                Include PDF Metadata
-            </label>
-        </div>
-        
-        <div class="form-group">
-            <label for="pageRange">Page Range (optional, e.g., "1-3" or "1,3,5"):</label>
-            <input type="text" id="pageRange" placeholder="Leave empty for all pages">
-        </div>
-        
-        <div class="form-group">
-            <button onclick="extractTextBasic()" id="basicBtn">Extract Text (Basic)</button>
-            <button onclick="extractTextAdvanced()" id="advancedBtn">Extract Text (Advanced)</button>
             <button onclick="clearResults()">Clear Results</button>
         </div>
         
@@ -139,6 +257,28 @@
 
     <script>
         const API_BASE_URL = 'http://localhost:8000';
+        
+        // Update file list display
+        document.getElementById('batchPdfFiles').addEventListener('change', function(e) {
+            const fileList = document.getElementById('fileList');
+            const files = e.target.files;
+            
+            if (files.length > 0) {
+                let html = '<h4>Selected Files:</h4>';
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    const size = (file.size / 1024).toFixed(2);
+                    html += `<div class="file-item">
+                        <span class="file-name">${file.name}</span>
+                        <span class="file-size">${size} KB</span>
+                    </div>`;
+                }
+                fileList.innerHTML = html;
+                fileList.style.display = 'block';
+            } else {
+                fileList.style.display = 'none';
+            }
+        });
         
         function showLoading() {
             const resultDiv = document.getElementById('result');
@@ -172,6 +312,42 @@
                     }
                 }
             }
+            
+            resultDiv.innerHTML = content;
+        }
+        
+        function showBatchSuccess(data) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result success';
+            
+            let content = `Batch Extraction Complete!\n\n`;
+            content += `Summary: ${data.summary}\n`;
+            content += `Total files: ${data.total_files}\n`;
+            content += `Successful: ${data.successful_extractions}\n`;
+            content += `Failed: ${data.failed_extractions}\n\n`;
+            content += `${'='.repeat(50)}\n\n`;
+            
+            // Display results for each file
+            data.results.forEach((fileResult, index) => {
+                content += `File ${index + 1}: ${fileResult.filename}\n`;
+                content += `Status: ${fileResult.success ? 'SUCCESS' : 'FAILED'}\n`;
+                content += `Pages: ${fileResult.pages}\n`;
+                content += `Message: ${fileResult.message}\n`;
+                
+                if (fileResult.success) {
+                    content += `Text length: ${fileResult.text.length} characters\n`;
+                    content += `First 200 characters: ${fileResult.text.substring(0, 200)}...\n`;
+                    
+                    if (fileResult.metadata) {
+                        content += `Metadata: ${JSON.stringify(fileResult.metadata, null, 2)}\n`;
+                    }
+                } else {
+                    content += `Error: ${fileResult.error || 'Unknown error'}\n`;
+                }
+                
+                content += `${'-'.repeat(30)}\n\n`;
+            });
             
             resultDiv.innerHTML = content;
         }
@@ -237,6 +413,82 @@
                     showSuccess(data);
                 } else {
                     showError(data.message || 'Extraction failed');
+                }
+            })
+            .catch(error => {
+                showError(`Network error: ${error.message}`);
+            });
+        }
+        
+        function extractTextBatch() {
+            const fileInput = document.getElementById('batchPdfFiles');
+            const method = document.getElementById('batchExtractionMethod').value;
+            const maxFiles = document.getElementById('maxFiles').value;
+            
+            if (!fileInput.files.length) {
+                showError('Please select at least one PDF file.');
+                return;
+            }
+            
+            showLoading();
+            
+            const formData = new FormData();
+            for (let i = 0; i < fileInput.files.length; i++) {
+                formData.append('files', fileInput.files[i]);
+            }
+            formData.append('method', method);
+            formData.append('max_files', maxFiles);
+            
+            fetch(`${API_BASE_URL}/extract-text-batch`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success !== undefined) {
+                    showBatchSuccess(data);
+                } else {
+                    showError(data.message || 'Batch extraction failed');
+                }
+            })
+            .catch(error => {
+                showError(`Network error: ${error.message}`);
+            });
+        }
+        
+        function extractTextBatchAdvanced() {
+            const fileInput = document.getElementById('batchPdfFiles');
+            const includeMetadata = document.getElementById('batchIncludeMetadata').checked;
+            const pageRange = document.getElementById('batchPageRange').value;
+            const maxFiles = document.getElementById('maxFiles').value;
+            
+            if (!fileInput.files.length) {
+                showError('Please select at least one PDF file.');
+                return;
+            }
+            
+            showLoading();
+            
+            const formData = new FormData();
+            for (let i = 0; i < fileInput.files.length; i++) {
+                formData.append('files', fileInput.files[i]);
+            }
+            formData.append('include_metadata', includeMetadata);
+            formData.append('max_files', maxFiles);
+            if (pageRange) {
+                formData.append('page_range', pageRange);
+            }
+            
+            fetch(`${API_BASE_URL}/extract-text-batch-advanced`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success !== undefined) {
+                    showBatchSuccess(data);
+                } else {
+                    showError(data.message || 'Advanced batch extraction failed');
                 }
             })
             .catch(error => {
