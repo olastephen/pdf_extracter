@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Text Extractor - Test Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        input[type="file"], select, input[type="checkbox"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .error {
+            color: #dc3545;
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+        }
+        .success {
+            color: #155724;
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+        }
+        .loading {
+            text-align: center;
+            color: #666;
+        }
+        .metadata {
+            background-color: #e9ecef;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        .metadata h4 {
+            margin-top: 0;
+            color: #495057;
+        }
+        .metadata-item {
+            margin-bottom: 5px;
+        }
+        .metadata-label {
+            font-weight: bold;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>PDF Text Extractor API Test</h1>
+        
+        <div class="form-group">
+            <label for="pdfFile">Select PDF File:</label>
+            <input type="file" id="pdfFile" accept=".pdf" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="extractionMethod">Extraction Method:</label>
+            <select id="extractionMethod">
+                <option value="pdfplumber">pdfplumber (Recommended)</option>
+                <option value="pypdf2">PyPDF2</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label>
+                <input type="checkbox" id="includeMetadata" checked>
+                Include PDF Metadata
+            </label>
+        </div>
+        
+        <div class="form-group">
+            <label for="pageRange">Page Range (optional, e.g., "1-3" or "1,3,5"):</label>
+            <input type="text" id="pageRange" placeholder="Leave empty for all pages">
+        </div>
+        
+        <div class="form-group">
+            <button onclick="extractTextBasic()" id="basicBtn">Extract Text (Basic)</button>
+            <button onclick="extractTextAdvanced()" id="advancedBtn">Extract Text (Advanced)</button>
+            <button onclick="clearResults()">Clear Results</button>
+        </div>
+        
+        <div id="result" class="result" style="display: none;"></div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:8000';
+        
+        function showLoading() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result loading';
+            resultDiv.innerHTML = 'Processing... Please wait.';
+        }
+        
+        function showError(message) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result error';
+            resultDiv.innerHTML = `Error: ${message}`;
+        }
+        
+        function showSuccess(data) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result success';
+            
+            let content = `Success: ${data.message}\n`;
+            content += `Pages processed: ${data.pages}\n`;
+            content += `Text length: ${data.text.length} characters\n\n`;
+            content += `Extracted Text:\n${'='.repeat(50)}\n${data.text}`;
+            
+            if (data.metadata) {
+                content += `\n\n${'='.repeat(50)}\nMetadata:\n`;
+                for (const [key, value] of Object.entries(data.metadata)) {
+                    if (value) {
+                        content += `${key}: ${value}\n`;
+                    }
+                }
+            }
+            
+            resultDiv.innerHTML = content;
+        }
+        
+        function extractTextBasic() {
+            const fileInput = document.getElementById('pdfFile');
+            const method = document.getElementById('extractionMethod').value;
+            
+            if (!fileInput.files[0]) {
+                showError('Please select a PDF file first.');
+                return;
+            }
+            
+            showLoading();
+            
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            formData.append('method', method);
+            
+            fetch(`${API_BASE_URL}/extract-text`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showSuccess(data);
+                } else {
+                    showError(data.message || 'Extraction failed');
+                }
+            })
+            .catch(error => {
+                showError(`Network error: ${error.message}`);
+            });
+        }
+        
+        function extractTextAdvanced() {
+            const fileInput = document.getElementById('pdfFile');
+            const includeMetadata = document.getElementById('includeMetadata').checked;
+            const pageRange = document.getElementById('pageRange').value;
+            
+            if (!fileInput.files[0]) {
+                showError('Please select a PDF file first.');
+                return;
+            }
+            
+            showLoading();
+            
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            formData.append('include_metadata', includeMetadata);
+            if (pageRange) {
+                formData.append('page_range', pageRange);
+            }
+            
+            fetch(`${API_BASE_URL}/extract-text-advanced`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showSuccess(data);
+                } else {
+                    showError(data.message || 'Extraction failed');
+                }
+            })
+            .catch(error => {
+                showError(`Network error: ${error.message}`);
+            });
+        }
+        
+        function clearResults() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'none';
+            resultDiv.innerHTML = '';
+        }
+        
+        // Test API connection on page load
+        window.onload = function() {
+            fetch(`${API_BASE_URL}/health`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log('API is running:', data);
+                })
+                .catch(error => {
+                    console.error('API connection failed:', error);
+                    showError('Cannot connect to API. Make sure the server is running on http://localhost:8000');
+                });
+        };
+    </script>
+</body>
+</html> 
